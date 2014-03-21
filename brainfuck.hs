@@ -56,21 +56,18 @@ modify i f l = h ++ [f x] ++ t
 clipNum :: Int -> Int
 clipNum x = ((x `mod` 256) + 256) `mod` 256
 
-evalBrainFuck :: [Symbol] -> [Int] -> Int -> String -> String -> Integer -> String
-evalBrainFuck [] _ _ _ acc ops = acc
-evalBrainFuck (h:t) d p acc =
-	case h of
-		Main.Right -> evalBrainFuck t d (p+1) acc 
-		Main.Left -> evalBrainFuck t d (p-1) acc 
-		Inc -> evalBrainFuck t (modify p (\x -> clipNum (x + 1)) d) p inp acc (ops+1)
-		Dec -> evalBrainFuck t (modify p (\x -> clipNum (x - 1)) d) p inp acc (ops+1)
-		Read -> evalBrainFuck t (modify p (\x -> ord (head inp)) d) p (tail inp) acc (ops+1)
-		Print -> evalBrainFuck t d p inp (acc ++ [chr (d !! p)]) (ops+1)
-		IfLeft (inside, notFirst) ->
-			(case d !! p of
-				0 -> evalBrainFuck t d p inp acc ( ops + ( if notFirst then 1 else 2))
-				otherwise -> evalBrainFuck (inside ++ [IfLeft (inside, True)] ++ t) d p inp acc ( ops + (if notFirst then 2 else 1))
-				)
+evalBrainFuck :: [Symbol] -> IO ()
+evalBrainFuck [] = return ()
+evalBrainFuck (h:t) =
+	(case h of
+		Main.IfLeft(inside, _) -> (putStr "while (*dp) {") >> (evalBrainFuck inside) >> (putStr "}")
+		Inc -> (putStr "++*dp;")
+		Dec -> (putStr "--*dp;")
+		Main.Left -> (putStr "--dp;")
+		Main.Right -> (putStr "++dp;")
+		Print -> (putStr "putchar(*dp);")
+		Read -> (putStr "*dp=getchar();")
+		) >> (evalBrainFuck t)
 
 
 main = do
@@ -78,4 +75,4 @@ main = do
 	let 
 		symbols = matchIfs (map (\c -> charToSym c) (filter Main.isSymbol allData)) [] []
 
-	putStrLn (evalBrainFuck symbols)
+	(putStr "int main() { char *arr = malloc(10000); char *dp = arr;") >> (evalBrainFuck symbols) >> (putStr "free(arr);return 0;}")
