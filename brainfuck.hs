@@ -56,18 +56,28 @@ modify i f l = h ++ [f x] ++ t
 clipNum :: Int -> Int
 clipNum x = ((x `mod` 256) + 256) `mod` 256
 
+optIncDec :: [Symbol] -> Int -> IO ()
+optIncDec [] c = if c == 0 then return () else (putStr "*dp+=") >> putStr (show c) >> putStr ";"
+optIncDec (h:t) c = 
+	case h of
+		Inc -> optIncDec t (clipNum c+1)
+		Dec -> optIncDec t (clipNum c-1)
+		_ -> (optIncDec [] c) >> evalBrainFuck (h:t)
+
 evalBrainFuck :: [Symbol] -> IO ()
 evalBrainFuck [] = return ()
 evalBrainFuck (h:t) =
-	(case h of
-		Main.IfLeft(inside, _) -> (putStr "while (*dp) {") >> (evalBrainFuck inside) >> (putStr "}")
-		Inc -> (putStr "++*dp;")
-		Dec -> (putStr "--*dp;")
-		Main.Left -> (putStr "--dp;")
-		Main.Right -> (putStr "++dp;")
-		Print -> (putStr "putchar(*dp);")
-		Read -> (putStr "*dp=getchar();")
-		) >> (evalBrainFuck t)
+	let
+		contin x = (x >> (evalBrainFuck t))
+	in 
+		case h of
+			Inc -> optIncDec t 1
+			Dec -> optIncDec t (-1)
+			Main.IfLeft(inside, _) -> contin ((putStr "while (*dp) {") >> (evalBrainFuck inside) >> (putStr "}"))
+			Main.Left -> contin (putStr "--dp;")
+			Main.Right -> contin (putStr "++dp;")
+			Print -> contin (putStr "putchar(*dp);")
+			Read -> contin (putStr "*dp=getchar();")
 
 
 main = do
