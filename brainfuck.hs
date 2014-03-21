@@ -58,10 +58,10 @@ clipNum x = ((x `mod` 256) + 256) `mod` 256
 
 evalBrainFuck :: [Symbol] -> [Int] -> Int -> String -> String -> Integer -> String
 evalBrainFuck [] _ _ _ acc ops = acc
-evalBrainFuck (h:t) d p inp acc ops = if ops >= 100000 then acc ++ "\nPROCESS TIME OUT. KILLED!!!" else
+evalBrainFuck (h:t) d p acc =
 	case h of
-		Main.Right -> evalBrainFuck t d (p+1) inp acc (ops+1)
-		Main.Left -> evalBrainFuck t d (p-1) inp acc (ops+1)
+		Main.Right -> evalBrainFuck t d (p+1) acc 
+		Main.Left -> evalBrainFuck t d (p-1) acc 
 		Inc -> evalBrainFuck t (modify p (\x -> clipNum (x + 1)) d) p inp acc (ops+1)
 		Dec -> evalBrainFuck t (modify p (\x -> clipNum (x - 1)) d) p inp acc (ops+1)
 		Read -> evalBrainFuck t (modify p (\x -> ord (head inp)) d) p (tail inp) acc (ops+1)
@@ -76,11 +76,6 @@ evalBrainFuck (h:t) d p inp acc ops = if ops >= 100000 then acc ++ "\nPROCESS TI
 main = do
 	allData <- getContents
 	let 
-		ls = lines allData
-		nm = map (\s -> (read s) :: Int) (words (head ls))
-		numInput = head nm
-		numLines = head (tail nm)
-		inp = take numInput (ls !! 1)
-		symbols = matchIfs (map (\c -> charToSym c) (filter Main.isSymbol (foldl (++) [] (take numLines (tail (tail ls)))))) [] []
+		symbols = matchIfs (map (\c -> charToSym c) (filter Main.isSymbol allData)) [] []
 
-	putStrLn (evalBrainFuck symbols (repeat (0 :: Int)) 0 inp "" 0)
+	putStrLn (evalBrainFuck symbols)
