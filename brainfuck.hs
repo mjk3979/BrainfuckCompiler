@@ -57,7 +57,7 @@ clipNum :: Int -> Int
 clipNum x = ((x `mod` 256) + 256) `mod` 256
 
 optIncDec :: [Symbol] -> Int -> IO ()
-optIncDec [] c = if c == 0 then return () else (putStr "*dp+=") >> putStr (show c) >> putStr ";"
+optIncDec [] c = if c == 0 then return () else (putStr "add byte [ecx], ") >> putStrLn (show c)
 optIncDec (h:t) c = 
 	case h of
 		Inc -> optIncDec t (clipNum c+1)
@@ -73,11 +73,11 @@ evalBrainFuck (h:t) =
 		case h of
 			Inc -> optIncDec t 1
 			Dec -> optIncDec t (-1)
-			Main.IfLeft(inside, _) -> contin ((putStr "while (*dp) {") >> (evalBrainFuck inside) >> (putStr "}"))
-			Main.Left -> contin (putStr "--dp;")
-			Main.Right -> contin (putStr "++dp;")
-			Print -> contin (putStr "putchar(*dp);")
-			Read -> contin (putStr "*dp=getchar();")
+			--Main.IfLeft(inside, _) -> contin ((putStrLn "while (*dp) {") >> (evalBrainFuck inside) >> (putStr "}"))
+			Main.Left -> contin (putStrLn "sub ecx, 1")
+			Main.Right -> contin (putStrLn "add ecx, 1")
+			Print -> contin (putStrLn "mov edx, 1\nmov ebx, 1\nmov eax, 4\nint 0x80")
+			--Read -> contin (putStrLn "*dp=getchar();")
 
 
 main = do
@@ -85,4 +85,4 @@ main = do
 	let 
 		symbols = matchIfs (map (\c -> charToSym c) (filter Main.isSymbol allData)) [] []
 
-	(putStr "int main() { char *arr = malloc(10000); char *dp = arr;") >> (evalBrainFuck symbols) >> (putStr "free(arr);return 0;}")
+	(putStrLn "section .bss\narr resb 10000\nsection .text\nglobal _start\n_start:\nmov ecx, arr") >> (evalBrainFuck symbols) >> (putStrLn "mov eax, 1\nmov ebx, 0\nint 0x80")
