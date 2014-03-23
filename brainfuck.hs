@@ -1,4 +1,5 @@
 import Data.Char
+import Data.IORef
 
 data Symbol = Right
 			| Left
@@ -56,24 +57,30 @@ modify i f l = h ++ [f x] ++ t
 clipNum :: Int -> Int
 clipNum x = ((x `mod` 256) + 256) `mod` 256
 
-optIncDec :: [Symbol] -> Int -> IO ()
-optIncDec [] c = if c == 0 then return () else (putStr "add byte [ecx], ") >> putStrLn (show c)
-optIncDec (h:t) c = 
+optIncDec :: [Symbol] -> Int -> IORef Int -> IO ()
+optIncDec [] c ic = if c == 0 then return () else (putStr "add byte [ecx], ") >> putStrLn (show c)
+optIncDec (h:t) c ic = 
 	case h of
-		Inc -> optIncDec t (clipNum c+1)
-		Dec -> optIncDec t (clipNum c-1)
-		_ -> (optIncDec [] c) >> evalBrainFuck (h:t)
+		Inc -> optIncDec t (clipNum c+1) ic
+		Dec -> optIncDec t (clipNum c-1) ic
+		_ -> (optIncDec [] c ic) >> evalBrainFuck (h:t) ic
 
-evalBrainFuck :: [Symbol] -> IO ()
-evalBrainFuck [] = return ()
-evalBrainFuck (h:t) =
+evalBrainFuck :: [Symbol] -> IORef Int -> IO ()
+evalBrainFuck [] ic = return ()
+evalBrainFuck (h:t) ic =
 	let
-		contin x = (x >> (evalBrainFuck t))
+		contin x = (x >> (evalBrainFuck t ic))
 	in 
 		case h of
-			Inc -> optIncDec t 1
-			Dec -> optIncDec t (-1)
-			--Main.IfLeft(inside, _) -> contin ((putStrLn "while (*dp) {") >> (evalBrainFuck inside) >> (putStr "}"))
+			Inc -> optIncDec t 1 ic
+			Dec -> optIncDec t (-1) ic
+			Main.IfLeft(inside, _) -> do 
+				lbl <- readIORef ic
+				let
+					slbl = "s" ++ (show lbl)
+					elbl = "e" ++ (show lbl)
+				modifyIORef ic (\x -> x + 1)
+				contin ((putStrLn "mov eax, [ecx]") >> (putStr "jz ") >> (putStrLn elbl) >> (putStr slbl) >> (putStrLn ":") >> (evalBrainFuck inside ic) >> (putStrLn "mov eax, [ecx]") >> (putStr "jnz ") >> (putStrLn slbl) >> (putStr elbl) >> (putStrLn ":"))
 			Main.Left -> contin (putStrLn "sub ecx, 1")
 			Main.Right -> contin (putStrLn "add ecx, 1")
 			Print -> contin (putStrLn "mov edx, 1\nmov ebx, 1\nmov eax, 4\nint 0x80")
@@ -82,7 +89,8 @@ evalBrainFuck (h:t) =
 
 main = do
 	allData <- getContents
+	counter <- newIORef 0
 	let 
 		symbols = matchIfs (map (\c -> charToSym c) (filter Main.isSymbol allData)) [] []
 
-	(putStrLn "section .bss\narr resb 10000\nsection .text\nglobal _start\n_start:\nmov ecx, arr") >> (evalBrainFuck symbols) >> (putStrLn "mov eax, 1\nmov ebx, 0\nint 0x80")
+	(putStrLn "section .bss\narr resb 10000\nsection .text\nglobal _start\n_start:\nmov ecx, arr") >> (evalBrainFuck symbols counter) >> (putStrLn "mov eax, 1\nmov ebx, 0\nint 0x80")
