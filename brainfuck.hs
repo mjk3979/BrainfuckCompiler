@@ -65,6 +65,14 @@ optIncDec (h:t) c ic =
 		Dec -> optIncDec t (clipNum c-1) ic
 		_ -> (optIncDec [] c ic) >> evalBrainFuck (h:t) ic
 
+optP :: [Symbol] -> Int -> IORef Int -> IO ()
+optP [] c ic = if c == 0 then return () else (putStr "add ecx,") >> putStrLn (show c)
+optP (h:t) c ic = 
+	case h of
+		Main.Left -> optP t (clipNum c-1) ic
+		Main.Right -> optP t (clipNum c+1) ic
+		_ -> (optP [] c ic) >> evalBrainFuck (h:t) ic
+
 evalBrainFuck :: [Symbol] -> IORef Int -> IO ()
 evalBrainFuck [] ic = return ()
 evalBrainFuck (h:t) ic =
@@ -81,8 +89,8 @@ evalBrainFuck (h:t) ic =
 					elbl = "e" ++ (show lbl)
 				modifyIORef ic (\x -> x + 1)
 				contin ((putStrLn "cmp byte [ecx],0") >> (putStr "je ") >> (putStrLn elbl) >> (putStr slbl) >> (putStrLn ":") >> (evalBrainFuck inside ic) >> (putStrLn "cmp byte[ecx],0") >> (putStr "jne ") >> (putStrLn slbl) >> (putStr elbl) >> (putStrLn ":"))
-			Main.Left -> contin (putStrLn "sub ecx, 1")
-			Main.Right -> contin (putStrLn "add ecx, 1")
+			Main.Left -> optP t (-1) ic
+			Main.Right -> optP t 1 ic
 			Print -> contin (putStrLn "mov edx,1\nmov ebx,1\nmov eax, 4\nint 0x80")
 			Read -> contin (putStrLn "mov eax,3\nmov ebx,0\nmov edx,1\nint 0x80")
 
