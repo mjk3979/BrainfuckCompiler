@@ -80,7 +80,7 @@ evalBrainFuck (h:t) ic =
 					slbl = "s" ++ (show lbl)
 					elbl = "e" ++ (show lbl)
 				modifyIORef ic (\x -> x + 1)
-				contin ((putStrLn "mov eax, [ecx]") >> (putStr "jz ") >> (putStrLn elbl) >> (putStr slbl) >> (putStrLn ":") >> (evalBrainFuck inside ic) >> (putStrLn "mov eax, [ecx]") >> (putStr "jnz ") >> (putStrLn slbl) >> (putStr elbl) >> (putStrLn ":"))
+				contin ((putStrLn "cmp byte [ecx],0") >> (putStr "je ") >> (putStrLn elbl) >> (putStr slbl) >> (putStrLn ":") >> (evalBrainFuck inside ic) >> (putStrLn "cmp byte[ecx],0") >> (putStr "jne ") >> (putStrLn slbl) >> (putStr elbl) >> (putStrLn ":"))
 			Main.Left -> contin (putStrLn "sub ecx, 1")
 			Main.Right -> contin (putStrLn "add ecx, 1")
 			Print -> contin (putStrLn "mov edx, 1\nmov ebx, 1\nmov eax, 4\nint 0x80")
